@@ -362,7 +362,6 @@ router.get('/get-tokens', (req, res) => {
   }
 });
 
-router.get('/teams', async (req, res) => {
 router.get("/leagues", async (req, res) => {
   try {
     const accessToken = req.query.accessToken || globalAccessToken;

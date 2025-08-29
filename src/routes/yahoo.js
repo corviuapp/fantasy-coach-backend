@@ -380,7 +380,9 @@ router.get("/leagues", async (req, res) => {
 
     const userTeams = users[0].user[1].teams;
     const leaguesMap = {};
-
+    console.log("DEBUG - userTeams count:", userTeams?.count);
+    console.log("DEBUG - First team sample:", JSON.stringify(userTeams?.[0], null, 2));    console.log("DEBUG - userTeams count:", userTeams?.count);
+    console.log("DEBUG - First team sample:", JSON.stringify(userTeams?.[0], null, 2));
     for (let i = 0; i < userTeams.count; i++) {
       const team = userTeams[i].team[0];
       // if (team.game_key === "461" || team.game_key === "449" || team.game_key === "nfl") { // TEMPORALMENTE DESHABILITADO

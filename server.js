@@ -86,7 +86,7 @@ class FantasyCoachServer {
     this.app.use('/auth/yahoo', yahooRoutes);
     this.app.use('/api/yahoo', yahooRoutes);
     
-    // Lineup optimization routes
+console.log("Yahoo routes mounted - yahooRoutes is:", !!yahooRoutes);    // Lineup optimization routes
     this.app.use('/api/lineup', lineupRoutes);
 
     // Basic auth routes

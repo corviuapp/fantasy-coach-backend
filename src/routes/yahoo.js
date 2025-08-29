@@ -17,6 +17,9 @@ const yahooService = new YahooService();
 // Middleware to check authentication
 const requireAuth = (req, res, next) => {
   const { sessionId } = req.query;
+router.get("/test", (req, res) => {
+  res.json({ message: "Yahoo routes are working" });
+});
   
   if (!sessionId) {
     return res.status(400).json({ 

@@ -383,7 +383,7 @@ router.get("/leagues", async (req, res) => {
 
     for (let i = 0; i < userTeams.count; i++) {
       const team = userTeams[i].team[0];
-      if (team.game_key === "nfl") {
+      if (team.game_code === "nfl") {
         const leagueKey = team.league_key;
         if (!leaguesMap[leagueKey]) {
           leaguesMap[leagueKey] = {

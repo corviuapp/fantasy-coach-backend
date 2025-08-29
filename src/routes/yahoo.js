@@ -374,7 +374,7 @@ router.get("/leagues", async (req, res) => {
       });
     }
     
-    const url = "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/teams?format=json";
+    const url = "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games/nfl/teams?format=json";
     console.log("LEAGUES ENDPOINT - Calling Yahoo API...");
     
     const response = await axios.get(url, {
@@ -382,34 +382,50 @@ router.get("/leagues", async (req, res) => {
     });
     
     console.log("LEAGUES ENDPOINT - Response status:", response.status);
-    console.log("LEAGUES ENDPOINT - Response data structure:", Object.keys(response.data || {}));
     
-    const users = response.data?.fantasy_content?.users;
+    // La respuesta viene en formato: fantasy_content.users[0].user[1].games[0].game[1].teams
+    const fantasyContent = response.data?.fantasy_content;
+    const users = fantasyContent?.users;
+    
     if (!users || !users[0]) {
-      console.log("LEAGUES ENDPOINT - No users found in response");
+      console.log("LEAGUES ENDPOINT - No users found");
       return res.json([]);
     }
-
-    const userTeams = users[0].user[1].teams;
-    console.log("LEAGUES ENDPOINT - Teams found:", userTeams?.count || 0);
+    
+    const userData = users[0].user;
+    const games = userData[1]?.games;
+    
+    if (!games || !games[0]) {
+      console.log("LEAGUES ENDPOINT - No games found");
+      return res.json([]);
+    }
+    
+    const nflGame = games[0].game;
+    const teams = nflGame[1]?.teams;
+    
+    console.log("LEAGUES ENDPOINT - Teams found:", teams?.count || 0);
     
     const leagues = [];
-    if (userTeams && userTeams.count > 0) {
-      for (let i = 0; i < userTeams.count; i++) {
-        const team = userTeams[i].team[0];
-        console.log(`LEAGUES ENDPOINT - Team ${i}:`, team?.name, team?.game_key);
+    if (teams && teams.count > 0) {
+      for (let i = 0; i < teams.count; i++) {
+        const teamData = teams[i].team[0];
+        console.log(\`LEAGUES ENDPOINT - Processing team \${i}:\`, teamData?.name);
+        
+        // Cada equipo representa una liga diferente
         leagues.push({
-          league_key: team.league_key || `league_${i}`,
-          name: team.name || `League ${i}`,
-          url: team.url || "#",
-          team_count: team.num_teams || 10,
-          team_key: team.team_key,
-          team_name: team.name
+          league_key: teamData.team_leagues?.[0]?.team_league?.league_key || teamData.league_key || \`423.l.\${i}\`,
+          name: teamData.name || \`League \${i + 1}\`,
+          url: teamData.url || "#",
+          team_count: 10, // Default
+          team_key: teamData.team_key,
+          team_name: teamData.name,
+          draft_status: teamData.draft_status || "postdraft",
+          is_owned_by_current_login: teamData.is_owned_by_current_login !== 0
         });
       }
     }
     
-    console.log(`LEAGUES ENDPOINT - Returning ${leagues.length} leagues`);
+    console.log(\`LEAGUES ENDPOINT - Returning \${leagues.length} leagues\`);
     return res.json(leagues);
     
   } catch (error) {

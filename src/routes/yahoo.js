@@ -359,56 +359,65 @@ router.get('/get-tokens', (req, res) => {
   }
 });
 
+router.get('/teams', async (req, res) => {
 router.get("/leagues", async (req, res) => {
   try {
-    // Accept accessToken from query parameter or use global token
     const accessToken = req.query.accessToken || globalAccessToken;
     
+    console.log("LEAGUES ENDPOINT - Token exists:", !!accessToken);
+    
     if (!accessToken) {
-      return res.status(401).json({ 
-        error: 'Access token required - provide accessToken query parameter or authenticate first' 
+      return res.status(401).json({
+        error: 'Access token required'
       });
     }
+    
     const url = "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/teams?format=json";
+    console.log("LEAGUES ENDPOINT - Calling Yahoo API...");
     
     const response = await axios.get(url, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
-
+    
+    console.log("LEAGUES ENDPOINT - Response status:", response.status);
+    console.log("LEAGUES ENDPOINT - Response data structure:", Object.keys(response.data || {}));
+    
     const users = response.data?.fantasy_content?.users;
-    if (!users || !users[0]) return res.json([]);
-
-    const userTeams = users[0].user[1].teams;
-    const leaguesMap = {};
-    console.log("DEBUG - userTeams count:", userTeams?.count);
-    console.log("DEBUG - First team sample:", JSON.stringify(userTeams?.[0], null, 2));    console.log("DEBUG - userTeams count:", userTeams?.count);
-    console.log("DEBUG - First team sample:", JSON.stringify(userTeams?.[0], null, 2));
-    for (let i = 0; i < userTeams.count; i++) {
-      const team = userTeams[i].team[0];
-      // if (team.game_key === "461" || team.game_key === "449" || team.game_key === "nfl") { // TEMPORALMENTE DESHABILITADO
-        const leagueKey = team.league_key;
-        if (!leaguesMap[leagueKey]) {
-          leaguesMap[leagueKey] = {
-            league_key: leagueKey,
-            name: team.name,
-            url: team.url,
-            team_count: team.num_teams,
-            team_key: team.team_key,
-            team_name: team.name
-          };
-        }
-      // } // TEMPORALMENTE DESHABILITADO
+    if (!users || !users[0]) {
+      console.log("LEAGUES ENDPOINT - No users found in response");
+      return res.json([]);
     }
 
-    return res.json(Object.values(leaguesMap));
+    const userTeams = users[0].user[1].teams;
+    console.log("LEAGUES ENDPOINT - Teams found:", userTeams?.count || 0);
+    
+    const leagues = [];
+    if (userTeams && userTeams.count > 0) {
+      for (let i = 0; i < userTeams.count; i++) {
+        const team = userTeams[i].team[0];
+        console.log(`LEAGUES ENDPOINT - Team ${i}:`, team?.name, team?.game_key);
+        leagues.push({
+          league_key: team.league_key || `league_${i}`,
+          name: team.name || `League ${i}`,
+          url: team.url || "#",
+          team_count: team.num_teams || 10,
+          team_key: team.team_key,
+          team_name: team.name
+        });
+      }
+    }
+    
+    console.log(`LEAGUES ENDPOINT - Returning ${leagues.length} leagues`);
+    return res.json(leagues);
+    
   } catch (error) {
-    console.error("Error:", error);
+    console.error("LEAGUES ENDPOINT ERROR:", error.message);
+    if (error.response) {
+      console.error("LEAGUES ENDPOINT - Yahoo API error:", error.response.status, error.response.data);
+    }
     res.status(500).json({ error: error.message });
   }
 });
-
-// Get teams in a league
-router.get('/teams', async (req, res) => {
   try {
     const { leagueKey } = req.query;
     const accessToken = req.query.accessToken || globalAccessToken;

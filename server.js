@@ -8,7 +8,7 @@ import { createServer } from 'http';
 import pg from 'pg';
 import yahooRoutes from './src/routes/yahoo.js';
 import lineupRoutes from './src/routes/lineup.js';
-
+console.log("Starting imports...");
 dotenv.config();
 
 const { Pool } = pg;

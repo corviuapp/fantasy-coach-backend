@@ -383,7 +383,7 @@ router.get("/leagues", async (req, res) => {
 
     for (let i = 0; i < userTeams.count; i++) {
       const team = userTeams[i].team[0];
-      if (team.game_key === "461" || team.game_key === "449" || team.game_key === "nfl") {
+      // if (team.game_key === "461" || team.game_key === "449" || team.game_key === "nfl") { // TEMPORALMENTE DESHABILITADO
         const leagueKey = team.league_key;
         if (!leaguesMap[leagueKey]) {
           leaguesMap[leagueKey] = {
@@ -395,7 +395,7 @@ router.get("/leagues", async (req, res) => {
             team_name: team.name
           };
         }
-      }
+      // } // TEMPORALMENTE DESHABILITADO
     }
 
     return res.json(Object.values(leaguesMap));

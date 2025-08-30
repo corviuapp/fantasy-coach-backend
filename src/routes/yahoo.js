@@ -409,12 +409,12 @@ router.get("/leagues", async (req, res) => {
     if (teams && teams.count > 0) {
       for (let i = 0; i < teams.count; i++) {
         const teamData = teams[i].team[0];
-        console.log(\`LEAGUES ENDPOINT - Processing team \${i}:\`, teamData?.name);
+        console.log(`LEAGUES ENDPOINT - Processing team ${i}:`, teamData?.name);
         
         // Cada equipo representa una liga diferente
         leagues.push({
-          league_key: teamData.team_leagues?.[0]?.team_league?.league_key || teamData.league_key || \`423.l.\${i}\`,
-          name: teamData.name || \`League \${i + 1}\`,
+          league_key: teamData.team_leagues?.[0]?.team_league?.league_key || teamData.league_key || `423.l.${i}`,
+          name: teamData.name || `League \${i + 1}`,
           url: teamData.url || "#",
           team_count: 10, // Default
           team_key: teamData.team_key,
@@ -425,7 +425,7 @@ router.get("/leagues", async (req, res) => {
       }
     }
     
-    console.log(\`LEAGUES ENDPOINT - Returning \${leagues.length} leagues\`);
+    console.log(`LEAGUES ENDPOINT - Returning ${leagues.length} leagues`);
     return res.json(leagues);
     
   } catch (error) {

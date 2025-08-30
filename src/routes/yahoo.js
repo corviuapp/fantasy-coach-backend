@@ -374,61 +374,100 @@ router.get("/leagues", async (req, res) => {
       });
     }
     
-    // Usar endpoint que SÍ funciona según nuestras pruebas
-    const userUrl = "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1?format=json";
-    console.log("LEAGUES ENDPOINT - Getting user info");
-    
-    const userResponse = await axios.get(userUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    
-    const userGuid = userResponse.data?.fantasy_content?.users?.[0]?.user?.[0]?.guid;
-    console.log("LEAGUES ENDPOINT - User GUID:", userGuid);
-    
-    // Intentar obtener ligas del usuario para NFL 2025
-    const leaguesUrl = `https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=423/leagues?format=json`;
-    console.log("LEAGUES ENDPOINT - Getting leagues");
+    // Obtener TODAS las ligas del usuario, no solo las del game_key 423
+    const leaguesUrl = "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/leagues?format=json";
+    console.log("LEAGUES ENDPOINT - Getting all user leagues");
     
     try {
-      const leaguesResponse = await axios.get(leaguesUrl, {
+      const response = await axios.get(leaguesUrl, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       
-      const games = leaguesResponse.data?.fantasy_content?.users?.[0]?.user?.[1]?.games;
+      const users = response.data?.fantasy_content?.users;
       const leagues = [];
       
-      if (games && games[0]) {
-        const gameLeagues = games[0].game[1]?.leagues;
+      if (users && users[0]) {
+        const userLeagues = users[0].user[1]?.leagues;
+        console.log("LEAGUES ENDPOINT - Total leagues found:", userLeagues?.count || 0);
         
-        if (gameLeagues && gameLeagues.count > 0) {
-          for (let i = 0; i < gameLeagues.count; i++) {
-            const league = gameLeagues[i].league[0];
-            leagues.push({
-              league_key: league.league_key,
-              name: league.name,
-              url: league.url || "#",
-              team_count: league.num_teams || 10,
-              draft_status: league.draft_status || "postdraft"
-            });
+        if (userLeagues && userLeagues.count > 0) {
+          for (let i = 0; i < userLeagues.count; i++) {
+            const league = userLeagues[i].league[0];
+            
+            // Solo incluir ligas de NFL (las que empiezan con 423 o 449 para 2024/2025)
+            if (league.league_key && (league.league_key.startsWith('423') || league.league_key.startsWith('449'))) {
+              console.log(`LEAGUES ENDPOINT - Adding league: ${league.name}`);
+              
+              leagues.push({
+                league_key: league.league_key,
+                name: league.name,
+                url: league.url || "#",
+                team_count: league.num_teams || 10,
+                draft_status: league.draft_status || "postdraft",
+                current_week: league.current_week || 1,
+                season: league.season || "2025",
+                logo_url: league.logo_url || null,
+                team_key: league.team_key || null,
+                team_name: league.team_name || null
+              });
+            }
           }
         }
       }
       
-      console.log(`LEAGUES ENDPOINT - Returning ${leagues.length} leagues`);
+      console.log(`LEAGUES ENDPOINT - Returning ${leagues.length} NFL leagues`);
       return res.json(leagues);
       
-    } catch (err) {
-      console.log("LEAGUES ENDPOINT - Leagues failed, returning empty");
-      return res.json([]);
+    } catch (leagueError) {
+      // Si falla, intentar el método anterior
+      console.log("LEAGUES ENDPOINT - Main endpoint failed, trying game-specific");
+      
+      const fallbackUrl = "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=423,449/leagues?format=json";
+      
+      try {
+        const fallbackResponse = await axios.get(fallbackUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        
+        const games = fallbackResponse.data?.fantasy_content?.users?.[0]?.user?.[1]?.games;
+        const leagues = [];
+        
+        if (games) {
+          for (let g = 0; g < (games.count || 0); g++) {
+            const gameLeagues = games[g]?.game?.[1]?.leagues;
+            
+            if (gameLeagues && gameLeagues.count > 0) {
+              for (let i = 0; i < gameLeagues.count; i++) {
+                const league = gameLeagues[i].league[0];
+                leagues.push({
+                  league_key: league.league_key,
+                  name: league.name,
+                  url: league.url || "#",
+                  team_count: league.num_teams || 10,
+                  draft_status: league.draft_status || "postdraft"
+                });
+              }
+            }
+          }
+        }
+        
+        console.log(`LEAGUES ENDPOINT - Fallback: Returning ${leagues.length} leagues`);
+        return res.json(leagues);
+        
+      } catch (fallbackError) {
+        console.log("LEAGUES ENDPOINT - Both methods failed");
+        return res.json([]);
+      }
     }
     
   } catch (error) {
     console.error("LEAGUES ENDPOINT ERROR:", error.message);
+    if (error.response) {
+      console.error("LEAGUES ENDPOINT - Yahoo API error:", error.response.status, error.response.data);
+    }
     res.status(500).json({ error: error.message });
   }
 });
-router.get('/roster', async (req, res) => {
-  try {
     const { leagueKey, teamKey } = req.query;
     const accessToken = req.query.accessToken || globalAccessToken;
     

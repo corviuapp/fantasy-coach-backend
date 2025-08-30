@@ -374,97 +374,56 @@ router.get("/leagues", async (req, res) => {
       });
     }
     
-    // Usar endpoint que funciona en 2025 - obtener juegos del usuario
-    const url = "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games?format=json";
-    console.log("LEAGUES ENDPOINT - Calling Yahoo API:", url);
+    // Usar endpoint que SÍ funciona según nuestras pruebas
+    const userUrl = "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1?format=json";
+    console.log("LEAGUES ENDPOINT - Getting user info");
     
-    const response = await axios.get(url, {
+    const userResponse = await axios.get(userUrl, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
     
-    console.log("LEAGUES ENDPOINT - Response status:", response.status);
+    const userGuid = userResponse.data?.fantasy_content?.users?.[0]?.user?.[0]?.guid;
+    console.log("LEAGUES ENDPOINT - User GUID:", userGuid);
     
-    const fantasyContent = response.data?.fantasy_content;
-    const users = fantasyContent?.users;
+    // Intentar obtener ligas del usuario para NFL 2025
+    const leaguesUrl = `https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=423/leagues?format=json`;
+    console.log("LEAGUES ENDPOINT - Getting leagues");
     
-    if (!users || !users[0]) {
-      console.log("LEAGUES ENDPOINT - No users found");
-      return res.json([]);
-    }
-    
-    const games = users[0].user[1]?.games;
-    console.log("LEAGUES ENDPOINT - Games found:", games?.count);
-    
-    // Buscar el juego NFL actual (game_key = 423 para 2025)
-    let nflGame = null;
-    if (games && games.count > 0) {
-      for (let i = 0; i < games.count; i++) {
-        const game = games[i].game[0];
-        if (game.game_key === "423" || game.code === "nfl") {
-          nflGame = games[i].game;
-          console.log("LEAGUES ENDPOINT - Found NFL game:", game.game_key, game.season);
-          break;
+    try {
+      const leaguesResponse = await axios.get(leaguesUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      
+      const games = leaguesResponse.data?.fantasy_content?.users?.[0]?.user?.[1]?.games;
+      const leagues = [];
+      
+      if (games && games[0]) {
+        const gameLeagues = games[0].game[1]?.leagues;
+        
+        if (gameLeagues && gameLeagues.count > 0) {
+          for (let i = 0; i < gameLeagues.count; i++) {
+            const league = gameLeagues[i].league[0];
+            leagues.push({
+              league_key: league.league_key,
+              name: league.name,
+              url: league.url || "#",
+              team_count: league.num_teams || 10,
+              draft_status: league.draft_status || "postdraft"
+            });
+          }
         }
       }
-    }
-    
-    if (!nflGame) {
-      console.log("LEAGUES ENDPOINT - No NFL game found for current season");
+      
+      console.log(`LEAGUES ENDPOINT - Returning ${leagues.length} leagues`);
+      return res.json(leagues);
+      
+    } catch (err) {
+      console.log("LEAGUES ENDPOINT - Leagues failed, returning empty");
       return res.json([]);
     }
-    
-    // Ahora obtener los equipos/ligas para NFL
-    const teamsUrl = `https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=423/teams?format=json`;
-    console.log("LEAGUES ENDPOINT - Getting NFL teams:", teamsUrl);
-    
-    const teamsResponse = await axios.get(teamsUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    
-    const teamsData = teamsResponse.data?.fantasy_content;
-    const teamsUsers = teamsData?.users;
-    
-    if (!teamsUsers || !teamsUsers[0]) {
-      console.log("LEAGUES ENDPOINT - No teams found");
-      return res.json([]);
-    }
-    
-    const userGames = teamsUsers[0].user[1]?.games;
-    if (!userGames || !userGames[0]) {
-      console.log("LEAGUES ENDPOINT - No games in teams response");
-      return res.json([]);
-    }
-    
-    const teams = userGames[0].game[1]?.teams;
-    console.log("LEAGUES ENDPOINT - Teams found:", teams?.count || 0);
-    
-    const leagues = [];
-    if (teams && teams.count > 0) {
-      for (let i = 0; i < teams.count; i++) {
-        const teamData = teams[i].team[0];
-        console.log(`LEAGUES ENDPOINT - Processing team ${i}:`, teamData?.name);
-        
-        leagues.push({
-          league_key: teamData.team_leagues?.[0]?.team_league?.league_key || teamData.league_key || `423.l.${i}`,
-          name: teamData.name || `League ${i + 1}`,
-          url: teamData.url || "#",
-          team_count: teamData.number_of_teams || 10,
-          team_key: teamData.team_key,
-          team_name: teamData.name,
-          draft_status: teamData.draft_status || "postdraft",
-          is_owned_by_current_login: teamData.is_owned_by_current_login !== 0
-        });
-      }
-    }
-    
-    console.log(`LEAGUES ENDPOINT - Returning ${leagues.length} leagues`);
-    return res.json(leagues);
     
   } catch (error) {
     console.error("LEAGUES ENDPOINT ERROR:", error.message);
-    if (error.response) {
-      console.error("LEAGUES ENDPOINT - Yahoo API error:", error.response.status, error.response.data);
-    }
     res.status(500).json({ error: error.message });
   }
 });

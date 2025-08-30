@@ -204,8 +204,8 @@ router.get('/callback', async (req, res) => {
       // PASO 3: Buscar en temporadas anteriores
       console.log('\\nSTEP 3: Checking previous seasons...');
       const previousSeasons = [
-        { year: '2024', key: '449' },
-        { year: '2023', key: '423' },
+        { year: '2024', key: '461' },
+        { year: '2023', key: '461' },
         { year: 'Current NFL', key: 'nfl' }
       ];
       
@@ -374,7 +374,7 @@ router.get("/leagues", async (req, res) => {
       });
     }
     
-    // Obtener TODAS las ligas del usuario, no solo las del game_key 423
+    // Obtener TODAS las ligas del usuario, no solo las del game_key 461
     const leaguesUrl = "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/leagues?format=json";
     console.log("LEAGUES ENDPOINT - Getting all user leagues");
     
@@ -394,8 +394,8 @@ router.get("/leagues", async (req, res) => {
           for (let i = 0; i < userLeagues.count; i++) {
             const league = userLeagues[i].league[0];
             
-            // Solo incluir ligas de NFL (las que empiezan con 423 o 449 para 2024/2025)
-            if (league.league_key && (league.league_key.startsWith('423') || league.league_key.startsWith('449'))) {
+            // Solo incluir ligas de NFL (las que empiezan con 461 o 461 para 2024/2025)
+            if (league.league_key && league.league_key.startsWith('461')) {
               console.log(`LEAGUES ENDPOINT - Adding league: ${league.name}`);
               
               leagues.push({
@@ -422,7 +422,7 @@ router.get("/leagues", async (req, res) => {
       // Si falla, intentar el método anterior
       console.log("LEAGUES ENDPOINT - Main endpoint failed, trying game-specific");
       
-      const fallbackUrl = "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=423,449/leagues?format=json";
+      const fallbackUrl = "https://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games;game_keys=461,461/leagues?format=json";
       
       try {
         const fallbackResponse = await axios.get(fallbackUrl, {
